@@ -89,7 +89,7 @@ func (ctrl *Controller) Pickup(fromFloor, toFloor int) bool {
 		}
 	}
 	
-	// if no match found put request into waiting queue
+	// if no match found put request into wait queue
 	if elevator == nil {
 		pickup := Pickup{fromFloor, toFloor}
 		ctrl.PickupQueue = append(ctrl.PickupQueue, pickup)
@@ -113,6 +113,15 @@ func (ctrl *Controller) Status(s EStatus) []*Elevator {
 
 // Start simulation a event listener loop
 func (ctrl *Controller) Start() {
+	go func() {
+		for {
+			<-time.Tick(StatusUpdateFrequency)
+			for _, el := range ctrl.Elevators {
+				fmt.Println(el.StatusString())	
+			}
+		}
+	} ()
+	
 	for {
 		select {
 		case event := <-ctrl.EventChan:
@@ -121,8 +130,6 @@ func (ctrl *Controller) Start() {
 				pickup := event.Data.(Pickup)
 				fmt.Printf("[PICK UP] from: %d to: %d\n", pickup.FromFloor, pickup.ToFloor)
 				ctrl.Pickup(pickup.FromFloor, pickup.ToFloor)
-			case "STATUS":
-				fmt.Printf("[STATUS] %s\n", event.Data.(string))
 			case "STATUS_CHANGE":
 				var queue []Pickup
 				for _, pickup := range ctrl.PickupQueue {
@@ -131,9 +138,7 @@ func (ctrl *Controller) Start() {
 					}
 				}
 				ctrl.PickupQueue = queue
-			}
-		default:
-			time.Sleep(10 * time.Millisecond)
+			}		
 		}
 	}
 }

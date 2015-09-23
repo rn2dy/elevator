@@ -1,10 +1,19 @@
 package main
 
+import "fmt"
+
 type Task struct {
 	priority int
-	Floor    int
-	ToFloor  int
+	Floor    int // pickup floor if IsPickup, otherwise means dropoff floor
+	ToFloor  int // only used if IsPickup
 	IsPickup bool
+}
+
+func (t Task) String() string {
+	if t.IsPickup {
+		return fmt.Sprintf("[From: %d, To: %d]", t.Floor, t.ToFloor)	
+	}
+	return fmt.Sprintf("[To: %d]", t.Floor)
 }
 
 type TaskPQ []Task
@@ -19,4 +28,8 @@ func (self *TaskPQ) Pop() (popped interface{}) {
 	popped = (*self)[len(*self)-1]
 	*self = (*self)[:len(*self)-1]
 	return
+}
+
+func (self *TaskPQ) Peek() interface{} {
+	return (*self)[len(*self)-1]
 }

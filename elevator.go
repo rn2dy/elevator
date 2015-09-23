@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"fmt"
 	"time"
+	"sort"
 )
 
 // EStatus elevator status
@@ -40,9 +41,8 @@ func NewElevator(id int) *Elevator {
 func (el *Elevator) Pickup(fromFloor, toFloor int) {
 	priority := Abs(el.CurrentFloor - fromFloor)
 	heap.Push(&el.TasksQueue, Task{priority, fromFloor, toFloor, true})
-	if el.TasksQueue.Len() == 1 {
-		el.NextFloor = el.TasksQueue[0].Floor
-	}
+	el.NextFloor = el.TasksQueue.Peek().(Task).Floor
+	fmt.Printf("Elevator_%d pickup from: %d, to: %d\n", el.ID, fromFloor, toFloor)
 	el.SetStatus()
 }
 
@@ -55,12 +55,24 @@ func (el *Elevator) NextStop() {
 			el.registerStop(task.ToFloor)
 		}
 		if el.TasksQueue.Len() > 0 {
-			el.NextFloor = el.TasksQueue[0].Floor
+			el.NextFloor = el.TasksQueue.Peek().(Task).Floor
 		} else {
 			el.NextFloor = el.CurrentFloor
 		}
-		el.SetStatus()
+		el.invalidate()
+		el.SetStatus()	
 	}
+}
+
+// rebuild the priority queue since the priority might have changed
+func (el *Elevator) invalidate() {
+	var q TaskPQ
+	heap.Init(&q)
+	for _, task := range el.TasksQueue {
+		priority := Abs(el.CurrentFloor - task.Floor)
+		heap.Push(&q, Task{priority, task.Floor, task.ToFloor, task.IsPickup})
+	}
+	el.TasksQueue = q
 }
 
 func (el *Elevator) registerStop(floor int) {
@@ -129,27 +141,23 @@ func (el *Elevator) StatusString() string {
 	case Idle:
 		status = "Idling..."
 	}
-	return fmt.Sprintf("[Elevator_%d %s] Current floor: %d, Next floor: %d, Queue: %v",
+	return fmt.Sprintf("[Elevator_%d %s] Current floor: %d, Next floor: %d, Stops: %v",
 		el.ID,
 		status,
 		el.CurrentFloor,
 		el.NextFloor,
-		el.TasksQueue)
+		el.sortQueue())
+}
+
+func (el *Elevator) sortQueue() TaskPQ {
+	var queue TaskPQ
+	queue = append(queue, el.TasksQueue...)
+	sort.Sort(queue)
+	return queue
 }
 
 // Run simulate elevator move up/down with a time ticking loop
 func (el *Elevator) Run() {
-	// send status update to controller every 3s
-	go func() {
-		for {
-			<-time.Tick(StatusUpdateFrequency)
-			el.Controller <- Event{
-				Name: "STATUS",
-				Data: el.StatusString(),
-			}
-		}
-	}()
-
 	// every 300ms the elevator moves to the next target floor
 	for {
 		select {

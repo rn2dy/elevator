@@ -102,4 +102,4 @@ type Elevator struct {
 }
 ```
 
-Each instance of elevator owns a priority queue (called _TasksQueue_) that is used to manage the elevators' stops. The priority of each _Task_ (stop) is determined based on the number of stops between the elevator's current floor and the pickup floor.
+Each instance of elevator owns a priority queue (called _TasksQueue_) that is used to manage the elevators' stops. The priority of each _Task_ (stop) is determined based on the number of stops between the elevator's current floor and the pickup floor and the priorities of the queue will gets updated whenever the elevator moved to a new floor.
